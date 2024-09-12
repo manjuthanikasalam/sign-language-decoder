@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SILENCE DECODER</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            /* background-color: salmon;  */
+            background-image: url('https://images.fineartamerica.com/images/artworkimages/mediumlarge/3/bcba-tee-boho-rainbow-rbt-asl-applied-behavior-analysis-bcba-kayson-lillya.jpg'); /* Relative path */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 50px;
+    background-color: oldlace; /* Set background color for the container */
+    border-radius: 10px; /* Rounded corners */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1); /* Add shadow */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* background-image: url('./images/hand.jpg'); */
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+
+        .webcam-container {
+            margin-top: 20px;
+            width: 300px;
+            height: 300px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            overflow: hidden;
+             background-color: white;  
+            position: relative;
+        }
+
+        .label-container {
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .prediction-box {
+            /* background-color: #e6e6e6; */
+            padding: 10px;
+            border-radius: 5px; /* Rounded corners */
+            margin-top: 20px;
+            background-color: grey; 
+            text-align: center;
+        }
+
+        h1 {
+            color: #333; /* Set text color */
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .start-button {
+            padding: 15px 30px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: grey;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .start-button:hover {
+            background-color: grey;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Sign Language Detector</h1>
+        <button type="button" onclick="init()" class="start-button">Start</button>
+        <div class="webcam-container" id="webcam-container">
+            <div class="rating-card" id="rating-card">Rating: <span id="rating-value">-</span></div>
+        </div>
+        <div id="label-container" class="label-container"></div>
+        <div class="prediction-box">
+            <p>Predicted Label: <span id="predicted-label">-</span></p>
+            <button onclick="speakText()">Speak</button>
+        </div>
+    </div>
+
+    <script>
+        const URL = "https://teachablemachine.withgoogle.com/models/I-P3C--Ir/";
+
+        let model, webcam, labelContainer, maxPredictions, ratingCard, ratingValue, predictedLabel;
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true;
+            webcam = new tmImage.Webcam(300, 300, flip);
+            await webcam.setup();
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+
+            predictedLabel = document.getElementById("predicted-label");
+            ratingCard = document.getElementById("rating-card");
+            ratingValue = document.getElementById("rating-value");
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            for (let i = 0; i < maxPredictions; i++) {
+                const classPrediction =
+                    prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+                labelContainer.childNodes[i].innerHTML = classPrediction;
+
+                if (prediction[i].probability > 0.8) {
+                    predictedLabel.textContent = prediction[i].className;
+                    ratingValue.textContent = prediction[i].probability.toFixed(2);
+                    ratingCard.style.display = 'block';
+                } else {
+                    ratingCard.style.display = 'none';
+                }
+            }
+        }
+
+        function speakText() {
+            var predictedLabel = document.getElementById("predicted-label").textContent;
+            var utterance = new SpeechSynthesisUtterance(predictedLabel);
+            window.speechSynthesis.speak(utterance);
+}
+
+
+    </script>
+</body>
+
+</html>
